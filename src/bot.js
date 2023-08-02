@@ -28,6 +28,35 @@ const configuration = new Configuration(
 );
 const openai = new OpenAIApi(configuration);
 
+async function queryDB(sql,error2,connection,interaction)
+{
+    connection.query(sql, function (err2, results, fields){
+        if(err2)
+        {
+            error2 = true;
+            console.log(err2);
+            console.log(err2.errno);
+            if(err2.errno === 1062)
+            {
+                interaction.reply("Birthday already logged!");
+                error2 = true;
+               
+            }
+            if(err2.errno === 1406)
+            {
+                interaction.reply("Wrong Format!");
+                error2 = true;
+               
+            }
+
+          
+        }
+        if(error2 === false)
+        interaction.reply("Your birthday has been saved!");
+        console.log(results)
+        return error2;
+    })
+}
 
 
 const prefix = '?';
@@ -70,37 +99,36 @@ client.on('interactionCreate', async function (interaction, message) {
         console.log(getVoiceConnections());
     }
     if (interaction.commandName === `set-birthday`) {
-
+        let error2 = false;
         try {
+            
             const monthbday = interaction.options.get('month').value;
             const daybday = interaction.options.get('day').value;
             const datebday = monthbday + '/' + daybday;
             const sql = `INSERT INTO Birthday(userID, userName, birthDate) VALUES ('${interaction.user.id}','${interaction.user.username}','${datebday}');`
             console.log(sql);
-            con.getConnection(function (err, connection) {
+           con.getConnection(async function (err, connection) {
+                
                 console.log("DB Connected!");
                 if(err)
                 {
                     console.log(err);
                     return;
                 }
-                connection.query(sql, function (err2, results, fields){
-                    if(err2)
-                    {
-                        console.log(err2);
-                        return;
-                    }
-                    console.log(results)
-                })
-                
-                connection.release();
-                interaction.reply("Your bithday has been saved!");
+
+              
+                const res = await queryDB(sql,error2,connection,interaction);
+                error2 = res;
+              
+               
             });
-
-
+            
         } catch (error) {
-            console.log(error);
+            console.log(error + "Date!");
+            interaction.reply("Wrong Format MM/DD!");
         }
+
+
 
 
     }
